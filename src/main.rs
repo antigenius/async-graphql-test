@@ -11,7 +11,6 @@ use uuid::Uuid;
 
 // Domain Model for a character.
 #[derive(Clone, Debug, SimpleObject)]
-// #[graphql(input_name = "CharacterInput")]
 struct CharacterEntity {
     id: String,
     full_name: String,
@@ -35,18 +34,32 @@ impl CharacterEntity {
 // `async_graphql` will convert to `fullName` for me because of the
 // `SimpleObject` derive.
 #[derive(Debug, Deserialize, Serialize, SimpleObject)]
-struct CharacterType {
-    id: String,
-    full_name: String,
-    description: String,
+pub struct CharacterType {
+    pub id: String,
+    pub full_name: String,
+    pub description: String,
 }
 
 // GQL type to create a character
+// #[derive(InputObject, Serialize)]
+// // #[Object(rename_all = "camelCase")]
+// #[serde(rename_all = "camelCase")]
+// pub struct CreateCharacterInputType {
+//     #[graphql(name = "fullName")]
+//     pub full_name: String,
+//     pub description: String,
+// }
+// the above errors: Failed to parse response
+
+
 #[derive(InputObject, Serialize)]
-struct CreateCharacterInputType {
-    full_name: String,
-    description: String,
+#[graphql(rename_fields = "camelCase")]
+pub struct CreateCharacterInputType {
+    #[graphql(name = "fullName")]
+    pub full_name: String,
+    pub description: String,
 }
+// the above errors: Invalid value for argument "character", field "fullName" of type "String!" is required but not provided
 
 // GQL Query type
 #[derive(Default)]
@@ -109,12 +122,12 @@ pub async fn playground() -> HttpResponse {
 }
 
 // Application struct for testing
-struct Application {
+pub struct Application {
     server: Server,
 }
 
 impl Application {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let listener = TcpListener::bind("127.0.0.1:8000")
             .unwrap();
         let repo = Repo {};
@@ -155,7 +168,6 @@ impl Application {
 
 
 #[tokio::main]
-// async fn main() -> Result<Server, std::io::Error> {
 async fn main() -> Result<(), std::io::Error> {
     let app = Application::new();
     app.run_until_stopped().await?;
