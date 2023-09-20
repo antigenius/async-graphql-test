@@ -2,7 +2,8 @@ use fakeit::{name, words};
 use reqwest_graphql::Client;
 use uuid::{Uuid, Version};
 
-use async_graphql_test::{Application, CreateCharacterInput, CreateCharacterResponse};
+use async_graphql_test::Application;
+use async_graphql_test::gql::{CreateCharacterInput, CreateCharacterResponse};
 
 
 #[derive(serde::Serialize)]
