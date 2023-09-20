@@ -2,12 +2,18 @@ use fakeit::{name, words};
 use reqwest_graphql::Client;
 use uuid::{Uuid, Version};
 
-use async_graphql_test::{Application, CharacterType, CreateCharacterInputType};
+use async_graphql_test::{Application, CreateCharacterInput, CreateCharacterResponse};
 
 
 #[derive(serde::Serialize)]
 struct Vars {
-    input: CreateCharacterInputType,
+    input: CreateCharacterInput,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Response {
+    create_character: CreateCharacterResponse
 }
 
 async fn spawn_app() {
@@ -18,26 +24,28 @@ async fn spawn_app() {
 #[tokio::test]
 async fn test_create_character() {
     let _ = spawn_app().await;
-    let character = CreateCharacterInputType {
+    let character = CreateCharacterInput {
         full_name: name::full(),
         description: words::sentence(4),
     };
     let vars = Vars { input: character };
     let query = r#"
-        mutation CreateNewCharacter($input: CreateCharacterInputType) {
+        mutation CreateNewCharacter($input: CreateCharacterInput) {
             createCharacter(character: $input) {
-                id
-                fullName
-                description
+                success
+                character {
+                    id
+                    fullName
+                    description
+                }
             }
         }
     "#;
-    let client = Client::new("http://127.0.0.1:8000");
-    let response = client
-        .query_with_vars::<CharacterType, Vars>(query, vars)
+    let response = Client::new("http://127.0.0.1:8000")
+        .query_with_vars::<Response, Vars>(query, vars)
         .await
         .unwrap();
     
-    let id = Uuid::parse_str(&response.id).unwrap();
+    let id = Uuid::parse_str(&response.create_character.character.id).unwrap();
     assert_eq!(Some(Version::Random), id.get_version())
 }

@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 
 // Domain Model for a character.
-#[derive(Clone, Debug, SimpleObject)]
+#[derive(Clone, Debug)]
 struct CharacterEntity {
     id: String,
     full_name: String,
@@ -34,32 +34,38 @@ impl CharacterEntity {
 // `async_graphql` will convert to `fullName` for me because of the
 // `SimpleObject` derive.
 #[derive(Debug, Deserialize, Serialize, SimpleObject)]
+// This needs to be added for testing with the reqwest_graphql::Client, same
+// with the struct below
+#[serde(rename_all = "camelCase")]
 pub struct CharacterType {
     pub id: String,
     pub full_name: String,
     pub description: String,
 }
 
-// GQL type to create a character
-// #[derive(InputObject, Serialize)]
-// // #[Object(rename_all = "camelCase")]
-// #[serde(rename_all = "camelCase")]
-// pub struct CreateCharacterInputType {
-//     #[graphql(name = "fullName")]
-//     pub full_name: String,
-//     pub description: String,
-// }
-// the above errors: Failed to parse response
-
+impl From<CharacterEntity> for CharacterType {
+    fn from(character: CharacterEntity) -> Self {
+        Self {
+            id: character.id,
+            full_name: character.full_name,
+            description: character.description,
+        }
+    }
+}
 
 #[derive(InputObject, Serialize)]
-#[graphql(rename_fields = "camelCase")]
-pub struct CreateCharacterInputType {
-    #[graphql(name = "fullName")]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCharacterInput {
     pub full_name: String,
     pub description: String,
 }
-// the above errors: Invalid value for argument "character", field "fullName" of type "String!" is required but not provided
+
+#[derive(Deserialize, Serialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCharacterResponse {
+    pub character: CharacterType,
+    pub success: bool,
+}
 
 // GQL Query type
 #[derive(Default)]
@@ -70,9 +76,9 @@ impl Query {
     async fn character(
         &self,
         ctx: &Context<'_>,
-    ) -> FieldResult<CharacterEntity> {
+    ) -> FieldResult<CharacterType> {
         let repo = ctx.data::<Repo>().unwrap();
-        Ok(repo.get().await)
+        Ok(repo.get().await.into())
     }
 }
 
@@ -84,15 +90,18 @@ impl Mutation {
     async fn create_character(
         &self,
         ctx: &Context<'_>,
-        character: CreateCharacterInputType,
-    ) -> CharacterEntity {
+        character: CreateCharacterInput,
+    ) -> CreateCharacterResponse {
         let c = CharacterEntity::new(
             character.full_name,
             character.description
         );
         let repo = ctx.data::<Repo>().unwrap();
         repo.insert(c.clone()).await;
-        c
+        CreateCharacterResponse {
+            character: c.into(),
+            success: true
+        }
     }
 }
 
