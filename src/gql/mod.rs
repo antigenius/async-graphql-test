@@ -45,9 +45,10 @@ impl Query {
     async fn character(
         &self,
         ctx: &Context<'_>,
+        id: String,
     ) -> FieldResult<CharacterType> {
         let repo = ctx.data::<Repo>().unwrap();
-        Ok(repo.get().await.into())
+        Ok(repo.get(id).await.into())
     }
 }
 
